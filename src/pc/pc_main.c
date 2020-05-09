@@ -12,6 +12,7 @@
 
 #include "gfx/gfx_pc.h"
 #include "gfx/gfx_opengl.h"
+#include "gfx/gfx_vulkan.h"
 #include "gfx/gfx_sdl.h"
 
 #include "audio/audio_api.h"
@@ -53,7 +54,7 @@ void send_display_list(struct SPTask *spTask) {
     if (!inited) {
         return;
     }
-    gfx_run((Gfx *)spTask->task.t.data_ptr);
+    gfx_run((Gfx *) spTask->task.t.data_ptr);
 }
 
 #define printf
@@ -61,10 +62,10 @@ void send_display_list(struct SPTask *spTask) {
 void produce_one_frame(void) {
     gfx_start_frame();
     game_loop_one_iteration();
-    
+
     int samples_left = audio_api->buffered();
     u32 num_audio_samples = samples_left < audio_api->get_desired_buffered() ? 544 : 528;
-    //printf("Audio samples: %d %u\n", samples_left, num_audio_samples);
+    // printf("Audio samples: %d %u\n", samples_left, num_audio_samples);
     s16 audio_buffer[544 * 2 * 2];
     for (int i = 0; i < 2; i++) {
         /*if (audio_cnt-- == 0) {
@@ -73,9 +74,9 @@ void produce_one_frame(void) {
         u32 num_audio_samples = audio_cnt < 2 ? 528 : 544;*/
         create_next_audio_buffer(audio_buffer + i * (num_audio_samples * 2), num_audio_samples);
     }
-    //printf("Audio samples before submitting: %d\n", audio_api->buffered());
+    // printf("Audio samples before submitting: %d\n", audio_api->buffered());
     audio_api->play(audio_buffer, 2 * num_audio_samples * 4);
-    
+
     gfx_end_frame();
 }
 
@@ -84,9 +85,7 @@ static void em_main_loop(void) {
 }
 
 static void request_anim_frame(void (*func)(double time)) {
-    EM_ASM(requestAnimationFrame(function(time) {
-        dynCall("vd", $0, [time]);
-    }), func);
+    EM_ASM(requestAnimationFrame(function(time) { dynCall("vd", $0, [time]); }), func);
 }
 
 static void on_anim_frame(double time) {
@@ -117,7 +116,7 @@ static void save_config(void) {
 }
 
 void main_func(void) {
-    static u64 pool[0x165000/8 / 4 * sizeof(void *)];
+    static u64 pool[0x165000 / 8 / 4 * sizeof(void *)];
     main_pool_init(pool, pool + sizeof(pool) / sizeof(pool[0]));
     gEffectsMemoryPool = mem_pool_init(0x4000, MEMORY_POOL_LEFT);
 
@@ -128,11 +127,16 @@ void main_func(void) {
     emscripten_set_main_loop(em_main_loop, 0, 0);
     request_anim_frame(on_anim_frame);
 #endif
+#ifdef TARGET_VULKAN
+    wm_api = &gfx_glfw;
+    rendering_api = &gfx_vulkan_api;
+#else
     wm_api = &gfx_sdl;
     rendering_api = &gfx_opengl_api;
+#endif
     gfx_init(wm_api, rendering_api);
 
-    if (audio_api == NULL && audio_sdl.init()) 
+    if (audio_api == NULL && audio_sdl.init())
         audio_api = &audio_sdl;
 
     if (audio_api == NULL) {

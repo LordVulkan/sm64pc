@@ -24,7 +24,8 @@ TARGET_N64 = 0
 TARGET_RPI ?= 0
 # Compiler to use (ido or gcc)
 COMPILER ?= ido
-
+# Build Vulkan Backend
+TARGET_VULKAN ?= 1
 # Build for Emscripten/WebGL
 TARGET_WEB ?= 0
 # Specify the target you are building for, 0 means native
@@ -136,6 +137,9 @@ COMPARE := 0
 
 ifeq ($(TARGET_WEB),1)
   VERSION_CFLAGS := $(VERSION_CFLAGS) -DTARGET_WEB
+endif
+ifeq ($(TARGET_VULKAN),1)
+  VERSION_CFLAGS := $(VERSION_CFLAGS) -DTARGET_VULKAN
 endif
 
 ################### Universal Dependencies ###################
@@ -445,7 +449,7 @@ LDFLAGS := -lm -lGL -lSDL2 -no-pie -s TOTAL_MEMORY=20MB -g4 --source-map-base ht
 else
 
 ifeq ($(WINDOWS_BUILD),1)
-LDFLAGS := $(BITS) -march=$(TARGET_ARCH) -Llib -lpthread -lglew32 `$(CROSS)sdl2-config --static-libs` -lm -lglu32 -lsetupapi -ldinput8 -luser32 -lgdi32 -limm32 -lole32 -loleaut32 -lshell32 -lwinmm -lversion -luuid -lopengl32 -no-pie -static
+LDFLAGS := $(BITS) -march=$(TARGET_ARCH) -Llib -lpthread -lglew32 `$(CROSS)sdl2-config --static-libs` `pkg-config --static --libs glfw3` /C/Windows/System32/vulkan-1.dll -lm -lglu32 -lsetupapi -ldinput8 -luser32 -lgdi32 -limm32 -lole32 -loleaut32 -lshell32 -lwinmm -lversion -luuid -lopengl32 -no-pie -static
 else
 
 # Linux / Other builds below
