@@ -26,6 +26,10 @@ TARGET_RPI ?= 0
 COMPILER ?= ido
 # Build Vulkan Backend
 TARGET_VULKAN ?= 1
+
+# Enable better camera by default
+BETTERCAMERA ?= 1
+
 # Build for Emscripten/WebGL
 TARGET_WEB ?= 0
 # Specify the target you are building for, 0 means native
@@ -39,6 +43,7 @@ else
 endif
 
 # Automatic settings for PC port(s)
+# WINDOWS_BUILD IS NOT FOR COMPILING A WINDOWS EXECUTABLE UNDER LINUX!
 
 NON_MATCHING := 1
 GRUCODE := f3dex2e
@@ -47,6 +52,7 @@ WINDOWS_BUILD := 0
 ifeq ($(TARGET_WEB),0)
 ifeq ($(OS),Windows_NT)
 WINDOWS_BUILD := 1
+endif
 endif
 
 # Release (version) flag defs
@@ -241,7 +247,6 @@ OPT_FLAGS += $(BITS)
 
 ifeq ($(TARGET_WEB),1)
   OPT_FLAGS := -O2 -g4 --source-map-base http://localhost:8080/
-endif
 endif
 
 # Use a default opt flag for gcc, then override if RPi
@@ -442,6 +447,12 @@ CC_CHECK := $(CC) -fsyntax-only -fsigned-char $(INCLUDE_CFLAGS) -Wall -Wextra -W
 CFLAGS := $(OPT_FLAGS) $(INCLUDE_CFLAGS) $(VERSION_CFLAGS) $(GRUCODE_CFLAGS) -fno-strict-aliasing -fwrapv `$(CROSS)sdl2-config --cflags`
 endif
 
+# Check for better camera option
+ifeq ($(BETTERCAMERA),1)
+CC_CHECK += -DBETTERCAMERA
+CFLAGS += -DBETTERCAMERA
+endif
+
 ASFLAGS := -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS)
 
 ifeq ($(TARGET_WEB),1)
@@ -515,6 +526,9 @@ asm/boot.s: $(BUILD_DIR)/lib/bin/ipl3_font.bin
 
 $(BUILD_DIR)/lib/bin/ipl3_font.bin: lib/ipl3_font.png
 	$(IPLFONTUTIL) e $< $@
+
+#Required so the compiler doesn't complain about this not existing.
+$(BUILD_DIR)/src/game/camera.o: $(BUILD_DIR)/include/text_strings.h
 
 $(BUILD_DIR)/include/text_strings.h: include/text_strings.h.in
 	$(TEXTCONV) charmap.txt $< $@
