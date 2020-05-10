@@ -27,8 +27,8 @@ COMPILER ?= ido
 # Build Vulkan Backend
 TARGET_VULKAN ?= 1
 
-# Enable better camera by default
-BETTERCAMERA ?= 1
+# Disable better camera by default
+BETTERCAMERA ?= 0
 
 # Build for Emscripten/WebGL
 TARGET_WEB ?= 0
