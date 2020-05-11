@@ -21,8 +21,6 @@
 
 #include "configfile.h"
 
-#define CONFIG_FILE "sm64config.txt"
-
 OSMesg D_80339BEC;
 OSMesgQueue gSIEventMesgQueue;
 
