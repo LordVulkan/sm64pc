@@ -29,6 +29,8 @@ TARGET_VULKAN ?= 1
 
 # Disable better camera by default
 BETTERCAMERA ?= 0
+# Disable no drawing distance by default
+NODRAWINGDISTANCE ?= 0
 
 # Build for Emscripten/WebGL
 TARGET_WEB ?= 0
@@ -453,6 +455,12 @@ endif
 ifeq ($(BETTERCAMERA),1)
 CC_CHECK += -DBETTERCAMERA
 CFLAGS += -DBETTERCAMERA
+endif
+
+# Check for no drawing distance option
+ifeq ($(NODRAWINGDISTANCE),1)
+CC_CHECK += -DNODRAWINGDISTANCE
+CFLAGS += -DNODRAWINGDISTANCE
 endif
 
 ASFLAGS := -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS)
