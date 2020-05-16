@@ -25,7 +25,7 @@ TARGET_RPI ?= 0
 # Compiler to use (ido or gcc)
 COMPILER ?= ido
 # Build Vulkan Backend
-TARGET_VULKAN ?= 1
+TARGET_VULKAN ?= 0
 
 # Disable better camera by default
 BETTERCAMERA ?= 0
@@ -146,9 +146,6 @@ COMPARE := 0
 
 ifeq ($(TARGET_WEB),1)
   VERSION_CFLAGS := $(VERSION_CFLAGS) -DTARGET_WEB
-endif
-ifeq ($(TARGET_VULKAN),1)
-  VERSION_CFLAGS := $(VERSION_CFLAGS) -DTARGET_VULKAN
 endif
 
 ################### Universal Dependencies ###################
@@ -461,6 +458,12 @@ endif
 ifeq ($(NODRAWINGDISTANCE),1)
 CC_CHECK += -DNODRAWINGDISTANCE
 CFLAGS += -DNODRAWINGDISTANCE
+endif
+
+# Check for Vulkan
+ifeq ($(TARGET_VULKAN),1)
+CC_CHECK += -DTARGET_VULKAN
+CFLAGS += -DTARGET_VULKAN
 endif
 
 ASFLAGS := -I include -I $(BUILD_DIR) $(VERSION_ASFLAGS)
