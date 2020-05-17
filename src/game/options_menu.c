@@ -9,11 +9,14 @@
 #include "game/print.h"
 #include "game/segment2.h"
 #include "game/save_file.h"
+#ifdef BETTERCAMERA
 #include "game/bettercamera.h"
+#endif
 #include "game/mario_misc.h"
 #include "game/game_init.h"
 #include "game/ingame_menu.h"
 #include "game/options_menu.h"
+#include "pc/cliopts.h"
 #include "pc/configfile.h"
 #include "pc/controller/controller_api.h"
 
@@ -31,22 +34,24 @@ static u8 optmenu_bind_idx = 0;
 // menus:   add a new submenu definition and a new
 //          option to the optsMain list
 
-static const u8 toggleStr[][64] = {
+static const u8 toggleStr[][16] = {
     { TEXT_OPT_DISABLED },
     { TEXT_OPT_ENABLED },
 };
 
-static const u8 menuStr[][64] = {
+static const u8 menuStr[][32] = {
     { TEXT_OPT_HIGHLIGHT },
     { TEXT_OPT_BUTTON1 },
     { TEXT_OPT_BUTTON2 },
     { TEXT_OPT_OPTIONS },
     { TEXT_OPT_CAMERA },
     { TEXT_OPT_CONTROLS },
+    { TEXT_OPT_VIDEO },
+    { TEXT_OPT_AUDIO },
     { TEXT_EXIT_GAME },
 };
 
-static const u8 optsCameraStr[][64] = {
+static const u8 optsCameraStr[][32] = {
     { TEXT_OPT_CAMX },
     { TEXT_OPT_CAMY },
     { TEXT_OPT_INVERTX },
@@ -55,9 +60,21 @@ static const u8 optsCameraStr[][64] = {
     { TEXT_OPT_CAMP },
     { TEXT_OPT_ANALOGUE },
     { TEXT_OPT_MOUSE },
+    { TEXT_OPT_CAMD },
 };
 
-static const u8 bindStr[][64] = {
+static const u8 optsVideoStr[][32] = {
+    { TEXT_OPT_FSCREEN },
+    { TEXT_OPT_TEXFILTER },
+    { TEXT_OPT_NEAREST },
+    { TEXT_OPT_LINEAR },
+};
+
+static const u8 optsAudioStr[][32] = {
+    { TEXT_OPT_MVOLUME },
+};
+
+static const u8 bindStr[][32] = {
     { TEXT_OPT_UNBOUND },
     { TEXT_OPT_PRESSKEY },
     { TEXT_BIND_A },
@@ -74,6 +91,11 @@ static const u8 bindStr[][64] = {
     { TEXT_BIND_DOWN },
     { TEXT_BIND_LEFT },
     { TEXT_BIND_RIGHT },
+};
+
+static const u8 *filterChoices[] = {
+    optsVideoStr[2],
+    optsVideoStr[3],
 };
 
 enum OptType {
@@ -119,6 +141,23 @@ struct SubMenu {
     s32 scroll;
 };
 
+/* helper macros */
+
+#define DEF_OPT_TOGGLE(lbl, bv) \
+    { .type = OPT_TOGGLE, .label = lbl, .bval = bv }
+#define DEF_OPT_SCROLL(lbl, uv, min, max, st) \
+    { .type = OPT_SCROLL, .label = lbl, .uval = uv, .scrMin = min, .scrMax = max, .scrStep = st }
+#define DEF_OPT_CHOICE(lbl, uv, ch) \
+    { .type = OPT_CHOICE, .label = lbl, .uval = uv, .choices = ch, .numChoices = sizeof(ch) / sizeof(ch[0]) }
+#define DEF_OPT_SUBMENU(lbl, nm) \
+    { .type = OPT_SUBMENU, .label = lbl, .nextMenu = nm }
+#define DEF_OPT_BIND(lbl, uv) \
+    { .type = OPT_BIND, .label = lbl, .uval = uv }
+#define DEF_OPT_BUTTON(lbl, act) \
+    { .type = OPT_BUTTON, .label = lbl, .actionFn = act }
+#define DEF_SUBMENU(lbl, opt) \
+    { .label = lbl, .opts = opt, .numOpts = sizeof(opt) / sizeof(opt[0]) }
+
 /* button action functions */
 
 static void optmenu_act_exit(UNUSED struct Option *self, s32 arg) {
@@ -127,61 +166,68 @@ static void optmenu_act_exit(UNUSED struct Option *self, s32 arg) {
 
 /* submenu option lists */
 
+#ifdef BETTERCAMERA
 static struct Option optsCamera[] = {
-    { .type = OPT_TOGGLE, .label = optsCameraStr[6], .bval = &configEnableCamera,                                          },
-    { .type = OPT_TOGGLE, .label = optsCameraStr[7], .bval = &configCameraMouse,                                           },
-    { .type = OPT_TOGGLE, .label = optsCameraStr[2], .bval = &configCameraInvertX,                                         },
-    { .type = OPT_TOGGLE, .label = optsCameraStr[3], .bval = &configCameraInvertY,                                         },
-    { .type = OPT_SCROLL, .label = optsCameraStr[0], .uval = &configCameraXSens, .scrMin = 10, .scrMax = 250, .scrStep = 1 },
-    { .type = OPT_SCROLL, .label = optsCameraStr[1], .uval = &configCameraYSens, .scrMin = 10, .scrMax = 250, .scrStep = 1 },
-    { .type = OPT_SCROLL, .label = optsCameraStr[4], .uval = &configCameraAggr,  .scrMin = 0,  .scrMax = 100, .scrStep = 1 },
-    { .type = OPT_SCROLL, .label = optsCameraStr[5], .uval = &configCameraPan,   .scrMin = 0,  .scrMax = 100, .scrStep = 1 },
+    DEF_OPT_TOGGLE( optsCameraStr[6], &configEnableCamera ),
+    DEF_OPT_TOGGLE( optsCameraStr[7], &configCameraMouse ),
+    DEF_OPT_TOGGLE( optsCameraStr[2], &configCameraInvertX ),
+    DEF_OPT_TOGGLE( optsCameraStr[3], &configCameraInvertY ),
+    DEF_OPT_SCROLL( optsCameraStr[0], &configCameraXSens, 10, 250, 1 ),
+    DEF_OPT_SCROLL( optsCameraStr[1], &configCameraYSens, 10, 250, 1 ),
+    DEF_OPT_SCROLL( optsCameraStr[4], &configCameraAggr, 0, 100, 1 ),
+    DEF_OPT_SCROLL( optsCameraStr[5], &configCameraPan, 0, 100, 1 ),
+    DEF_OPT_SCROLL( optsCameraStr[8], &configCameraDegrade, 0, 100, 1 ),
 };
+#endif
 
 static struct Option optsControls[] = {
-    { .type = OPT_BIND, .label = bindStr[2],  .uval = configKeyA,          },
-    { .type = OPT_BIND, .label = bindStr[3],  .uval = configKeyB,          },
-    { .type = OPT_BIND, .label = bindStr[4],  .uval = configKeyStart,      },
-    { .type = OPT_BIND, .label = bindStr[5],  .uval = configKeyL,          },
-    { .type = OPT_BIND, .label = bindStr[6],  .uval = configKeyR,          },
-    { .type = OPT_BIND, .label = bindStr[7],  .uval = configKeyZ,          },
-    { .type = OPT_BIND, .label = bindStr[8],  .uval = configKeyCUp,        },
-    { .type = OPT_BIND, .label = bindStr[9],  .uval = configKeyCDown,      },
-    { .type = OPT_BIND, .label = bindStr[10], .uval = configKeyCLeft,      },
-    { .type = OPT_BIND, .label = bindStr[11], .uval = configKeyCRight,     },
-    { .type = OPT_BIND, .label = bindStr[12], .uval = configKeyStickUp,    },
-    { .type = OPT_BIND, .label = bindStr[13], .uval = configKeyStickDown,  },
-    { .type = OPT_BIND, .label = bindStr[14], .uval = configKeyStickLeft,  },
-    { .type = OPT_BIND, .label = bindStr[15], .uval = configKeyStickRight, },
+    DEF_OPT_BIND( bindStr[ 2], configKeyA ),
+    DEF_OPT_BIND( bindStr[ 3], configKeyB ),
+    DEF_OPT_BIND( bindStr[ 4], configKeyStart ),
+    DEF_OPT_BIND( bindStr[ 5], configKeyL ),
+    DEF_OPT_BIND( bindStr[ 6], configKeyR ),
+    DEF_OPT_BIND( bindStr[ 7], configKeyZ ),
+    DEF_OPT_BIND( bindStr[ 8], configKeyCUp ),
+    DEF_OPT_BIND( bindStr[ 9], configKeyCDown ),
+    DEF_OPT_BIND( bindStr[10], configKeyCLeft ),
+    DEF_OPT_BIND( bindStr[11], configKeyCRight ),
+    DEF_OPT_BIND( bindStr[12], configKeyStickUp ),
+    DEF_OPT_BIND( bindStr[13], configKeyStickDown ),
+    DEF_OPT_BIND( bindStr[14], configKeyStickLeft ),
+    DEF_OPT_BIND( bindStr[15], configKeyStickRight ),
+};
+
+static struct Option optsVideo[] = {
+    DEF_OPT_TOGGLE( optsVideoStr[0], &configFullscreen ),
+    DEF_OPT_CHOICE( optsVideoStr[1], &configFiltering, filterChoices ),
+};
+
+static struct Option optsAudio[] = {
+    DEF_OPT_SCROLL( optsAudioStr[0], &configMasterVolume, 0, MAX_VOLUME, 1 ),
 };
 
 /* submenu definitions */
 
-static struct SubMenu menuCamera = {
-    .label = menuStr[4],
-    .opts = optsCamera,
-    .numOpts = sizeof(optsCamera) / sizeof(optsCamera[0]),
-};
-
-static struct SubMenu menuControls = {
-    .label = menuStr[5],
-    .opts = optsControls,
-    .numOpts = sizeof(optsControls) / sizeof(optsControls[0]),
-};
+#ifdef BETTERCAMERA
+static struct SubMenu menuCamera   = DEF_SUBMENU( menuStr[4], optsCamera );
+#endif
+static struct SubMenu menuControls = DEF_SUBMENU( menuStr[5], optsControls );
+static struct SubMenu menuVideo    = DEF_SUBMENU( menuStr[6], optsVideo );
+static struct SubMenu menuAudio    = DEF_SUBMENU( menuStr[7], optsAudio );
 
 /* main options menu definition */
 
 static struct Option optsMain[] = {
-    { .type = OPT_SUBMENU, .label = menuStr[4], .nextMenu = &menuCamera, },
-    { .type = OPT_SUBMENU, .label = menuStr[5], .nextMenu = &menuControls, },
-    { .type = OPT_BUTTON,  .label = menuStr[6], .actionFn = optmenu_act_exit, },
+#ifdef BETTERCAMERA
+    DEF_OPT_SUBMENU( menuStr[4], &menuCamera ),
+#endif
+    DEF_OPT_SUBMENU( menuStr[5], &menuControls ),
+    DEF_OPT_SUBMENU( menuStr[6], &menuVideo ),
+    DEF_OPT_SUBMENU( menuStr[7], &menuAudio ),
+    DEF_OPT_BUTTON ( menuStr[8], optmenu_act_exit ),
 };
 
-static struct SubMenu menuMain = {
-    .label = menuStr[3],
-    .opts = optsMain,
-    .numOpts = sizeof(optsMain) / sizeof(optsMain[0]),
-};
+static struct SubMenu menuMain = DEF_SUBMENU( menuStr[3], optsMain );
 
 /* implementation */
 
@@ -284,7 +330,7 @@ static void optmenu_opt_change(struct Option *opt, s32 val) {
             break;
 
         case OPT_SCROLL:
-            *opt->uval = wrap_add(*opt->uval, val, opt->scrMin, opt->scrMax);
+            *opt->uval = wrap_add(*opt->uval, opt->scrStep * val, opt->scrMin, opt->scrMax);
             break;
 
         case OPT_SUBMENU:
@@ -311,7 +357,7 @@ static void optmenu_opt_change(struct Option *opt, s32 val) {
             break;
 
         default: break;
-    };
+    }
 }
 
 static inline s16 get_hudstr_centered_x(const s16 sx, const u8 *str) {
@@ -375,9 +421,11 @@ void optmenu_toggle(void) {
         play_sound(SOUND_MENU_MARIO_CASTLE_WARP2, gDefaultSoundArgs);
         #endif
         optmenu_open = 0;
+        #ifdef BETTERCAMERA
         newcam_init_settings(); // load bettercam settings from config vars
+        #endif
         controller_reconfigure(); // rebind using new config values
-        configfile_save(CONFIG_FILE);
+        configfile_save(gCLIOpts.ConfigFile);
     }
 }
 

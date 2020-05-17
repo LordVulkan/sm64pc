@@ -3,10 +3,13 @@
 
 #include <stdbool.h>
 
-#define CONFIG_FILE "sm64config.txt"
-#define MAX_BINDS 3
+#define MAX_BINDS    3
+#define MAX_VOLUME   127
+#define VOLUME_SHIFT 7
 
 extern bool         configFullscreen;
+extern unsigned int configFiltering;
+extern unsigned int configMasterVolume;
 extern unsigned int configKeyA[];
 extern unsigned int configKeyB[];
 extern unsigned int configKeyStart[];
@@ -26,6 +29,7 @@ extern unsigned int configCameraXSens;
 extern unsigned int configCameraYSens;
 extern unsigned int configCameraAggr;
 extern unsigned int configCameraPan;
+extern unsigned int configCameraDegrade;
 extern bool         configCameraInvertX;
 extern bool         configCameraInvertY;
 extern bool         configEnableCamera;
